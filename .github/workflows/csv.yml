@@ -41,9 +41,8 @@ jobs:
 
     - name: Set up Git identity
       run: |
-        git config --local user.name "github-actions[bot]"
-        git config --local user.email "github-actions[bot]@users.noreply.github.com"
-
+        git config --global user.email "action@github.com"
+        git config --global user.name "GitHub Action"
 
     - name: Install xlsx2csv
       run: sudo apt-get install -y xlsx2csv  # Install the CLI tool
@@ -59,6 +58,11 @@ jobs:
           echo "Converted $xlsx_file to $csv_file"
         done
       
+    - name: Fetch latest changes and rebase
+      run: |
+        git fetch origin develop
+        git rebase origin/develop || echo "Rebase conflict or no changes to rebase"
+
     - name: Commit and push changes
       run: |
         git add .
