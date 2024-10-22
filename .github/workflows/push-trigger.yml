@@ -1,7 +1,9 @@
-name: Setup Postgresql & Run postgres_init for MOSIP_Master & Run docker container
+name: XLSX to CSV Conversion on Pull Request
 
 on:
-  pull_request:
+  release:
+    types: [published]
+  pull_request_target:
     types: [opened, reopened, synchronize]
   workflow_dispatch:
     inputs:
@@ -12,100 +14,63 @@ on:
         type: string
   push:
     branches:
+      - '!release-branch'
+      - release*
+      - master
+      - 1.*
       - develop
-      - 1.2.0.1
       - MOSIP*
-env:
-  DBUSER_PWD: mosip123
-  SU_USER_PWD: abc123
+
+permissions:
+
+  contents: write      # Required for pushing changes
+  workflows: write     # Required for modifying workflow files
+
 jobs:
-  setup-and-run:
+  convert_xlsx_to_csv:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v2
-      - name: Create Docker Network
-        run: docker network create mosip_network
-      - name: Setup PostgreSQL Container
-        run: |
-          docker run -d \
-            --name postgresql \
-            --network mosip_network \
-            -p 5432:5432 \
-            -e POSTGRES_USER=postgres \
-            -e POSTGRES_PASSWORD=${{ env.SU_USER_PWD }} \
-            -e POSTGRES_HOST_AUTH_METHOD=trust \
-            postgres:16
-      - name: Initialise mosip_master DB
-        run: |
-          docker run -itd \
-            --name mosip_master_container \
-            --network mosip_network \
-            -e MOSIP_DB_NAME=mosip_master \
-            -e DB_SERVERIP=postgresql \
-            -e DB_PORT=5432 \
-            -e SU_USER=postgres \
-            -e DML_FLAG=1 \
-            -e GIT_REPO_URL=https://github.com/mosip/admin-services.git \
-            -e GIT_BRANCH=develop \
-            -e SU_USER_PWD=${{ env.SU_USER_PWD }} \
-            -e DBUSER_PWD=${{ env.DBUSER_PWD }} \
-            mosipdev/postgres-init:develop
+    - name: Enable Debugging
+      run: |
+        echo "ACTIONS_RUNNER_DEBUG=true" >> $GITHUB_ENV
+        echo "ACTIONS_STEP_DEBUG=true" >> $GITHUB_ENV
 
-      - name: docker ps command
-        run: docker ps -a
-      - name: Print Logs of mosip_master
-        run: |
-          # Display mosip_master_container logs
-          docker logs -f mosip_master_container
-      
-      - name: Check whether db_init has errors in Logs
-        run: |
-          if docker logs  mosip_master_container | grep  -qi "error"; then
-            echo "Error found in mosip_master_container logs."
-            exit 1
-          else
-            echo "No errors found in mosip_master_container logs."
-          fi
+    - name: Checkout the PR code
+      uses: actions/checkout@v3
+      with:
+        ref: ${{ github.event.pull_request.head.sha }}  # Check out PR's code
+
+    - name: Set up Git identity
+      run: |
+        git config --local user.name "github-actions[bot]"
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
 
 
-      - name: Set environment variables
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            REPO_URL="${{ github.event.pull_request.head.repo.clone_url }}"
-            BRANCH_NAME="${{ github.event.pull_request.head.ref }}"
-          else
-            REPO_URL="https://github.com/${{ github.repository }}.git"
-            BRANCH_NAME="${{ github.ref_name }}"
-          fi
-          echo "REPO_URL=${REPO_URL}" >> $GITHUB_ENV
-          echo "BRANCH_NAME=${BRANCH_NAME}" >> $GITHUB_ENV
+    - name: Install xlsx2csv
+      run: sudo apt-get install -y xlsx2csv  # Install the CLI tool
 
-      - name: Run masterdata-loader
-        run: |
-          docker run -itd \
-            --name masterdata_loader \
-            --network mosip_network \
-            -e DB_HOST=postgresql \
-            -e DB_USER=masteruser \
-            -e DB_PORT=5432 \
-            -e DB_PWD=${{ env.DBUSER_PWD }} \
-            -e REPOSITORY=${{ env.REPO_URL }}\
-            -e BRANCH=${{ env.BRANCH_NAME }} \
-            mosipdev/masterdata-loader:develop
+    - name: Create output directory
+      run: mkdir -p mosip_master/csv  # Create the output directory
 
-      - name: docker ps command
-        run: docker ps -a
-      - name: Print Logs of masterdata_loader
-        run: |
-          # Display masterdata_loader logs
-          docker logs -f masterdata_loader
+    - name: Convert all XLSX to CSV
+      run: |
+        for xlsx_file in mosip_master/xlsx/*.xlsx; do
+          csv_file="mosip_master/csv/$(basename "${xlsx_file%.xlsx}.csv")"
+          xlsx2csv "$xlsx_file" > "$csv_file"
+          echo "Converted $xlsx_file to $csv_file"
+        done
 
-      - name: Check whether masterdata_loader has errors in Logs
-        run: |
-          if docker logs  masterdata_loader | grep  -qi "error"; then
-            echo "Error found in masterdata_loader logs."
-            exit 1
-          else
-            echo "No errors found in masterdata_loader logs."
-          fi    
+    - name: Fetch latest changes and rebase
+      run: |
+        git fetch origin develop
+        git rebase origin/develop || echo "Rebase conflict or no changes to rebase"
+
+    - name: Commit and push changes
+      run: |
+        git add .
+        git commit -m "Add converted CSV files" || echo "No changes to commit or merge conflict"
+        git push origin HEAD:${{ github.ref }} || echo "Failed to push changes"
+
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
