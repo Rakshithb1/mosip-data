@@ -1,5 +1,4 @@
 name: XLSX to CSV Conversion on Pull Request
-
 on:
   release:
     types: [published]
