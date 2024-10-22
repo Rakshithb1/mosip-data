@@ -3,7 +3,7 @@ name: XLSX to CSV Conversion on Pull Request
 on:
   release:
     types: [published]
-  pull_request:
+  pull_request_target:
     types: [opened, reopened, synchronize]
   workflow_dispatch:
     inputs:
@@ -21,13 +21,23 @@ on:
       - develop
       - MOSIP*
 
+permissions:
+  contents: write  # Ensure push permission is granted
+
 jobs:
   convert_xlsx_to_csv:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout the repository
+    - name: Enable Debugging
+      run: |
+        echo "ACTIONS_RUNNER_DEBUG=true" >> $GITHUB_ENV
+        echo "ACTIONS_STEP_DEBUG=true" >> $GITHUB_ENV
+
+    - name: Checkout the PR code
       uses: actions/checkout@v3
+      with:
+        ref: ${{ github.event.pull_request.head.sha }}  # Check out PR's code
 
     - name: Install xlsx2csv
       run: sudo apt-get install -y xlsx2csv  # Install the CLI tool
@@ -43,10 +53,10 @@ jobs:
           echo "Converted $xlsx_file to $csv_file"
         done
       
-    - name: Commit and push changes to a specific branch
+    - name: Commit and push changes
       run: |
-        git config --local user.name "github-actions[bot]"
-        git config --local user.email "github-actions[bot]@users.noreply.github.com"
-        git add mosip_master/csv/*.csv
-        git commit -m "Convert XLSX files to CSV [skip ci]"
-        git push origin HEAD:develop
+        git add .
+        git commit -m "Add converted CSV files"
+        git push origin HEAD:${{ github.ref }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
