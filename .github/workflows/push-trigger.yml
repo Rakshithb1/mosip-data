@@ -3,8 +3,8 @@ name: XLSX to CSV Conversion on Pull Request
 on:
   release:
     types: [published]
-  pull_request_target:
-    types: [opened, reopened, synchronize]
+  #pull_request_target:
+   # types: [opened, reopened, synchronize]
   workflow_dispatch:
     inputs:
       message:
