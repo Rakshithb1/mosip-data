@@ -58,10 +58,10 @@ jobs:
           echo "Converted $xlsx_file to $csv_file"
         done
       
-    - name: Fetch latest changes and rebase
-      run: |
-        git fetch origin develop
-        git rebase origin/develop || echo "Rebase conflict or no changes to rebase"
+    #- name: Fetch latest changes and rebase
+     # run: |
+    #    git fetch origin develop
+    #    git rebase origin/develop || echo "Rebase conflict or no changes to rebase"
 
     - name: Commit and push changes
       run: |
