@@ -65,6 +65,7 @@ jobs:
 
     - name: Commit and push changes
       run: |
+        git pull
         git add .
         git commit -m "Add converted CSV files" || echo "No changes to commit"
         git push origin HEAD:${{ github.ref }}
