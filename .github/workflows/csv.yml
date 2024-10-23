@@ -22,9 +22,8 @@ on:
       - MOSIP*
 
 permissions:
+  contents: write 
 
-  contents: write      # Required for pushing changes
-  workflows: write     # Required for modifying workflow files
 
 jobs:
   convert_xlsx_to_csv:
