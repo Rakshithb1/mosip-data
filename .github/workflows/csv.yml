@@ -22,7 +22,9 @@ on:
       - MOSIP*
 
 permissions:
-  contents: write  # Ensure push permission is granted
+
+  contents: write      # Required for pushing changes
+  workflows: write     # Required for modifying workflow files
 
 jobs:
   convert_xlsx_to_csv:
@@ -41,8 +43,9 @@ jobs:
 
     - name: Set up Git identity
       run: |
-        git config --global user.email "action@github.com"
-        git config --global user.name "GitHub Action"
+        git config --local user.name "github-actions[bot]"
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+
 
     - name: Install xlsx2csv
       run: sudo apt-get install -y xlsx2csv  # Install the CLI tool
@@ -57,16 +60,19 @@ jobs:
           xlsx2csv "$xlsx_file" > "$csv_file"
           echo "Converted $xlsx_file to $csv_file"
         done
+
       
     - name: Fetch latest changes and rebase
       run: |
         git fetch origin develop
         git rebase origin/develop || echo "Rebase conflict or no changes to rebase"
 
+
     - name: Commit and push changes
       run: |
         git add .
-        git commit -m "Add converted CSV files" || echo "No changes to commit"
-        git push origin HEAD:${{ github.ref }}
+        git commit -m "Add converted CSV files" || echo "No changes to commit or merge conflict"
+        git push origin HEAD:${{ github.ref }} || echo "Failed to push changes"
+
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
