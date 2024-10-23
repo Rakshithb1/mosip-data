@@ -12,14 +12,7 @@ on:
         required: false
         default: 'Triggered for Updates'
         type: string
-  push:
-    branches:
-      - '!release-branch'
-      - release*
-      - master
-      - 1.*
-      - develop
-      - MOSIP*
+  
 
 permissions:
   contents: write 
