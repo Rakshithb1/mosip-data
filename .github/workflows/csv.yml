@@ -58,14 +58,13 @@ jobs:
           echo "Converted $xlsx_file to $csv_file"
         done
       
-    #- name: Fetch latest changes and rebase
-     # run: |
-    #    git fetch origin develop
-    #    git rebase origin/develop || echo "Rebase conflict or no changes to rebase"
+    - name: Fetch latest changes and rebase
+      run: |
+        git fetch origin develop
+        git rebase origin/develop || echo "Rebase conflict or no changes to rebase"
 
     - name: Commit and push changes
       run: |
-        git pull origin develop
         git add .
         git commit -m "Add converted CSV files" || echo "No changes to commit"
         git push origin HEAD:${{ github.ref }}
