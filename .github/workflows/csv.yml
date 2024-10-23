@@ -3,7 +3,7 @@ name: XLSX to CSV Conversion on Pull Request
 on:
   release:
     types: [published]
-  pull_request:
+  pull_request_target:
     types: [opened, reopened, synchronize]
   workflow_dispatch:
     inputs:
@@ -22,9 +22,8 @@ on:
       - MOSIP*
 
 permissions:
+  contents: write 
 
-  contents: write      # Required for pushing changes
-  workflows: write     # Required for modifying workflow files
 
 jobs:
   convert_xlsx_to_csv:
