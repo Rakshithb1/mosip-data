@@ -12,11 +12,9 @@ on:
         required: false
         default: 'Triggered for Updates'
         type: string
-  
 
 permissions:
-  contents: write 
-
+  contents: write
 
 jobs:
   convert_xlsx_to_csv:
@@ -31,13 +29,12 @@ jobs:
     - name: Checkout the PR code
       uses: actions/checkout@v3
       with:
-        ref: ${{ github.event.pull_request.head.sha }}  # Check out PR's code
+        ref: ${{ github.event.pull_request.head.sha }}  # Check out the PR's code
 
     - name: Set up Git identity
       run: |
         git config --local user.name "github-actions[bot]"
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
-
 
     - name: Install xlsx2csv
       run: sudo apt-get install -y xlsx2csv  # Install the CLI tool
@@ -53,18 +50,17 @@ jobs:
           echo "Converted $xlsx_file to $csv_file"
         done
 
-      
-    - name: Fetch latest changes and rebase
+    - name: Fetch latest changes from develop branch of your fork
       run: |
+        git remote set-url origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"  # Update remote to point to your fork
         git fetch origin develop
         git rebase origin/develop || echo "Rebase conflict or no changes to rebase"
 
-
-    - name: Commit and push changes
+    - name: Commit and push changes to your fork
       run: |
         git add .
         git commit -m "Add converted CSV files" || echo "No changes to commit or merge conflict"
-        git push origin HEAD:${{ github.ref }} || echo "Failed to push changes"
+        git push origin HEAD:${{ github.event.pull_request.head.ref }} || echo "Failed to push changes"
 
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
