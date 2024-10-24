@@ -2,7 +2,7 @@ name: Postgresql
 
 on:
   pull_request:
-    types: [opened, reopened, synchronize, edited, assigned, unassigned]
+    types: [opened, reopened, synchronize]
   workflow_dispatch:
     inputs:
       message:
